@@ -142,7 +142,7 @@ ul.words li:first-child{border-top:0}
     <h2 class="sec">Dodaj wiele naraz</h2>
     <div class="card">
       <textarea id="bulk" rows="5" placeholder="wrzeciono - spindle&#10;tolerancja - tolerance&#10;frez - end mill / cutter"></textarea>
-      <p class="hint">Jedno słówko w linii: polskie, myślnik, angielskie. Działa też tabulator, średnik lub znak =. Możesz wkleić kolumny z Excela.</p>
+      <p class="hint">Jedno słówko w linii: polskie - angielskie - zdanie przykładowe (zdanie jest opcjonalne). Działa też tabulator, średnik lub znak =, więc możesz wkleić 2 lub 3 kolumny z Excela. Jeśli słówko już jest na liście, zostanie tylko uzupełnione o zdanie.</p>
       <div class="row"><button class="btn" id="bulkBtn">Importuj</button></div>
     </div>
 
@@ -294,7 +294,7 @@ function renderLearn(){
     <div class="bar"><i style="width:${pct}%"></i></div>
     <p class="dirlabel">${it.dir==='pl-en'?'Przetłumacz na angielski':'Przetłumacz na polski'}</p>
     <p class="prompt"><span>${esc(q)}</span>${it.dir==='en-pl'&&canSpeak?` <button class="say" id="sayQ" aria-label="Wymowa">🔊</button>`:''}</p>
-    <p class="note">${w.note?esc(w.note):''}</p>
+    <p class="note">${w.note?esc(fb?w.note:maskNote(w.note,a)):''}</p>
     <input type="text" class="answer ${fb?(session.result==='bad'?'bad':'ok'):''}" id="ans" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Wpisz tłumaczenie" ${fb?'readonly':''} value="${fb?esc(session.given||''):''}">
     ${fbHtml}
     <div class="row">
@@ -361,18 +361,30 @@ $('#addForm').onsubmit=e=>{
 };
 function newWord(pl,en,note){return{id:uid(),pl,en,note:note||'',box:0,due:todayStr(),added:Date.now(),seen:0,correct:0,wrong:0}}
 $('#bulkBtn').onclick=()=>{
-  const lines=$('#bulk').value.split('\n');let added=0,skipped=0;
+  const lines=$('#bulk').value.split('\n');let added=0,updated=0,skipped=0;
   for(const line of lines){
     const l=line.trim();if(!l)continue;
-    const m=l.match(/^(.+?)\s*(?:\t|\s[-–—]\s|;|=)\s*(.+)$/);
-    if(!m){skipped++;continue}
-    const pl=m[1].trim(),en=m[2].trim();
-    if(state.words.some(w=>norm(w.pl)===norm(pl)&&norm(w.en)===norm(en))){skipped++;continue}
-    state.words.push(newWord(pl,en,''));added++;
+    const parts=(l.includes('\t')?l.split('\t'):l.split(/\s[-–—]\s|;|=/)).map(x=>x.trim());
+    if(parts.length<2||!parts[0]||!parts[1]){skipped++;continue}
+    const pl=parts[0],en=parts[1],note=parts.slice(2).filter(Boolean).join(' - ');
+    const ex=state.words.find(w=>norm(w.pl)===norm(pl)&&norm(w.en)===norm(en));
+    if(ex){if(note&&ex.note!==note){ex.note=note;updated++}else skipped++;continue}
+    state.words.push(newWord(pl,en,note));added++;
   }
-  if(added){$('#bulk').value='';session=null;save();renderList()}
-  toast(`Dodano: ${added}`+(skipped?`, pominięto: ${skipped}`:''));
+  if(added||updated){$('#bulk').value='';session=null;save();renderList()}
+  toast(`Dodano: ${added}`+(updated?`, uzupełniono przykłady: ${updated}`:'')+(skipped?`, pominięto: ${skipped}`:''));
 };
+// ukrywa odpowiedź w zdaniu przykładowym, zanim odpowiesz
+function maskNote(note,answer){
+  let out=note;
+  for(const alt of answer.split(/[\/|]/).map(s=>s.trim()).filter(Boolean)){
+    const words=alt.split(/\s+/).map(wd=>{const clean=wd.replace(/[^\p{L}']/gu,'');if(!clean)return null;
+      const k=Math.max(3,clean.length-2);return clean.length<=3?clean.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\p{L}*':clean.slice(0,k).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\p{L}*'}).filter(Boolean);
+    if(!words.length)continue;
+    try{out=out.replace(new RegExp('(?<!\\p{L})'+words.join('\\s+')+'(?!\\p{L})','giu'),m=>'_'.repeat(Math.min(8,Math.max(3,m.length))))}catch(e){}
+  }
+  return out;
+}
 $('#search').oninput=renderList;
 
 

@@ -169,7 +169,20 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
 let state={words:[],settings:{newPerDay:10,dir:'pl-en'},intro:{date:'',count:0},days:{},updatedAt:0};
 
-function loadLocal(){try{const r=localStorage.getItem(LS_KEY);if(r){state=Object.assign(state,JSON.parse(r))}}catch(e){}}
+function loadLocal(){try{const r=localStorage.getItem(LS_KEY);if(r){state=Object.assign(state,JSON.parse(r))}}catch(e){}if(repairWords())saveLocal()}
+// naprawia słówka zaimportowane starszą wersją, w której zdanie trafiło do odpowiedzi
+function repairWords(){
+  let changed=false;const sep=/\s[-–—]\s/;
+  for(const w of state.words.slice()){
+    if(!sep.test(w.en))continue;
+    const i=w.en.search(sep);const en=w.en.slice(0,i).trim();const note=w.en.slice(i).replace(/^\s[-–—]\s/,'').trim();
+    const twin=state.words.find(x=>x!==w&&norm(x.pl)===norm(w.pl)&&norm(x.en)===norm(en));
+    if(twin){if(note&&!twin.note)twin.note=note;state.words=state.words.filter(x=>x!==w)}
+    else{w.en=en;if(note&&!w.note)w.note=note}
+    changed=true;
+  }
+  return changed;
+}
 function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(state))}catch(e){}}
 function save(){state.updatedAt=Date.now();saveLocal()}
 function setSync(t){$('#sync').textContent=t}
@@ -459,7 +472,7 @@ function bindBackup(){
   $('#impBtn').onclick=()=>$('#impFile').click();
   $('#impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.words))throw 0;
     if(!confirm(`Wczytać kopię z ${d.words.length} słówkami? Obecna lista zostanie zastąpiona.`))return;
-    state=Object.assign({words:[],settings:{newPerDay:10,dir:'pl-en'},intro:{date:'',count:0},days:{}},d);session=null;save();renderHeader();renderStats();toast('Wczytano kopię')}
+    state=Object.assign({words:[],settings:{newPerDay:10,dir:'pl-en'},intro:{date:'',count:0},days:{}},d);repairWords();session=null;save();renderHeader();renderStats();toast('Wczytano kopię')}
     catch(err){toast('To nie jest plik kopii ze Słówek')}e.target.value=''};
 }
 // ---------- nawigacja ----------

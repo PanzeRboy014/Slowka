@@ -53,7 +53,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
 .dirlabel{color:var(--soft);font-size:14px;margin:0 0 4px}
 .prompt{font:700 clamp(30px,9vw,44px)/1.1 "Bricolage Grotesque",sans-serif;margin:0 0 6px;word-break:break-word}
-.prompt span{background:linear-gradient(transparent 62%,var(--mark) 62%);padding:0 2px}
+.prompt span{text-decoration:underline;text-decoration-color:var(--mark);text-decoration-thickness:3px;text-underline-offset:10px;text-decoration-skip-ink:none}
 .note{color:var(--soft);font-size:15px;margin:0 0 16px;min-height:1px}
 input[type=text],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:12px 14px}
 input.answer{font-size:20px}
@@ -188,14 +188,26 @@ function check(input,target){
 
 // ---------- sesja ----------
 let session=null;
-function buildSession(){
+const PRACTICE_SIZE=15;
+function buildSession(mode='daily'){
   const t=todayStr();
   if(state.intro.date!==t)state.intro={date:t,count:0};
-  const due=state.words.filter(w=>w.box>0&&w.due<=t);
-  const freeNew=Math.max(0,state.settings.newPerDay-state.intro.count);
-  const fresh=state.words.filter(w=>w.box===0).slice(0,freeNew);
-  const items=shuffle([...due,...fresh]).map(w=>({id:w.id,retry:false,dir:pickDir()}));
-  session={queue:items,total:items.length,done:0,good:0,phase:'ask',cur:null,result:null};
+  let items;
+  if(mode==='new'){
+    const fresh=state.words.filter(w=>w.box===0).slice(0,state.settings.newPerDay);
+    items=shuffle(fresh).map(w=>({id:w.id,retry:false,dir:pickDir()}));
+  }else if(mode==='practice'){
+    // najpierw słówka z niskim poziomem i częstymi błędami
+    const score=w=>w.box*2-(w.wrong||0)+Math.random()*2;
+    const pool=state.words.filter(w=>w.box>0).sort((a,b)=>score(a)-score(b)).slice(0,PRACTICE_SIZE);
+    items=shuffle(pool).map(w=>({id:w.id,retry:false,practice:true,dir:pickDir()}));
+  }else{
+    const due=state.words.filter(w=>w.box>0&&w.due<=t);
+    const freeNew=Math.max(0,state.settings.newPerDay-state.intro.count);
+    const fresh=state.words.filter(w=>w.box===0).slice(0,freeNew);
+    items=shuffle([...due,...fresh]).map(w=>({id:w.id,retry:false,dir:pickDir()}));
+  }
+  session={mode,queue:items,total:items.length,done:0,good:0,phase:'ask',cur:null,result:null};
   next();
 }
 function pickDir(){const d=state.settings.dir;return d==='mix'?(Math.random()<.5?'pl-en':'en-pl'):d}
@@ -209,7 +221,13 @@ function answer(given,skip){
   const res=skip?'bad':check(given,target);
   session.result=res;session.phase='feedback';session.given=given;
   const t=todayStr();
-  if(!it.retry){
+  if(it.practice&&!it.retry){
+    w.seen=(w.seen||0)+1;
+    if(res!=='bad'){session.good++}else{session.queue.push({id:w.id,retry:true,practice:true,dir:it.dir})}
+    session.done++;
+  }else if(it.practice){
+    if(res==='bad')session.queue.push({id:w.id,retry:true,practice:true,dir:it.dir});
+  }else if(!it.retry){
     w.seen=(w.seen||0)+1;
     if(res!=='bad'){
       if(w.box===0){state.intro.count++}
@@ -242,11 +260,20 @@ function renderLearn(){
     const t=todayStr();
     const nextDue=state.words.filter(w=>w.box>0).map(w=>w.due).sort()[0];
     const left=state.words.filter(w=>w.box===0).length;
+    const known=state.words.filter(w=>w.box>0).length;
+    const dueNow=state.words.filter(w=>w.box>0&&w.due<=t).length;
     const msg=session.total?`Przerobione: ${session.total}, dobrze za pierwszym razem: ${session.good}.`:'Na dziś nie masz nic do powtórki.';
-    el.innerHTML=`<div class="card empty"><h2>${session.total?'Sesja zakończona':'Wszystko zrobione'}</h2><p>${msg}${nextDue?` Następna powtórka: ${nextDue===addDays(t,1)?'jutro':nextDue}.`:''}${left?` Nowych słówek w kolejce: ${left}.`:''}</p>
-    ${left?`<button class="btn" id="more">Ucz się 5 nowych słówek teraz</button>`:''}</div>
+    el.innerHTML=`<div class="card empty"><h2>${session.total?'Sesja zakończona':'Na dziś wszystko zrobione'}</h2><p>${msg}${nextDue?` Następna powtórka: ${nextDue===addDays(t,1)?'jutro':nextDue}.`:''}${left?` Nowych słówek w kolejce: ${left}.`:''}</p>
+    <div class="row" style="flex-direction:column">
+      ${dueNow?`<button class="btn" id="sDaily">Powtórki na dziś (${dueNow})</button>`:''}
+      ${left?`<button class="btn${dueNow?' ghost':''}" id="sNewS">Kolejna sesja: ${Math.min(left,state.settings.newPerDay)} nowych słówek</button>`:''}
+      ${known?`<button class="btn${(left||dueNow)?' ghost':''}" id="sPrac">Dodatkowa powtórka (${Math.min(known,PRACTICE_SIZE)} słówek)</button>`:''}
+    </div>
+    ${known?`<p class="hint" style="margin-top:10px">Dodatkowa powtórka nie zmienia poziomów słówek ani terminów powtórek.</p>`:''}</div>
     ${settingsHtml()}`;
-    if(left)$('#more').onclick=()=>{state.intro.count=Math.max(0,state.settings.newPerDay-5);buildSession()};
+    if(dueNow)$('#sDaily').onclick=()=>buildSession('daily');
+    if(left)$('#sNewS').onclick=()=>buildSession('new');
+    if(known)$('#sPrac').onclick=()=>buildSession('practice');
     bindSettings();return;
   }
   const it=session.cur;const w=state.words.find(x=>x.id===it.id);
@@ -263,7 +290,7 @@ function renderLearn(){
     else fbHtml=`<div class="feedback bad">Poprawna odpowiedź: <strong>${esc(a)}</strong> ${it.dir==='pl-en'?sayBtn:''}<br>To słówko wróci jeszcze w tej sesji.</div>`;
   }
   el.innerHTML=`<div class="card">
-    <div class="meta"><span>${session.done} z ${session.total}${session.queue.length&&session.done>=session.total?' · poprawki':''}</span><span>${isNew?'Nowe słówko':it.retry?'Poprawka':'Powtórka'}</span></div>
+    <div class="meta"><span>${session.done} z ${session.total}${session.queue.length&&session.done>=session.total?' · poprawki':''}</span><span>${it.practice?(it.retry?'Poprawka':'Dodatkowa powtórka'):isNew?'Nowe słówko':it.retry?'Poprawka':'Powtórka'}</span></div>
     <div class="bar"><i style="width:${pct}%"></i></div>
     <p class="dirlabel">${it.dir==='pl-en'?'Przetłumacz na angielski':'Przetłumacz na polski'}</p>
     <p class="prompt"><span>${esc(q)}</span>${it.dir==='en-pl'&&canSpeak?` <button class="say" id="sayQ" aria-label="Wymowa">🔊</button>`:''}</p>

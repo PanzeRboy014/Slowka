@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Słówka</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#16324F">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Słówka">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF3F1; --paper:#FFFFFF; --ink:#16324F; --soft:#5B7085; --line:#D3DDE3;
+  --ok:#23835F; --okbg:#DDF2E8; --bad:#B63A2A; --badbg:#F8E1DC; --mark:#F6D548;
+  --btn:#16324F; --btnink:#FFFFFF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1A24; --paper:#172636; --ink:#E6EEF4; --soft:#94A8BA; --line:#2A3D50;
+    --ok:#5CCB9C; --okbg:#173A2E; --bad:#F08B79; --badbg:#3E211C; --mark:#C9A92A;
+    --btn:#E6EEF4; --btnink:#0F1A24;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1A24; --paper:#172636; --ink:#E6EEF4; --soft:#94A8BA; --line:#2A3D50;
+  --ok:#5CCB9C; --okbg:#173A2E; --bad:#F08B79; --badbg:#3E211C; --mark:#C9A92A;
+  --btn:#E6EEF4; --btnink:#0F1A24;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 40px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:4px 0 14px}
+h1{font:800 26px/1.1 "Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+.streak{font-size:15px;color:var(--soft)}
+.streak b{color:var(--ink)}
+nav{display:grid;grid-template-columns:repeat(3,1fr);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;margin-bottom:18px}
+nav button{border:0;background:none;color:var(--soft);font:700 15px "Atkinson Hyperlegible",sans-serif;padding:9px 4px;border-radius:9px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--btn);color:var(--btnink)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.panel[hidden]{display:none}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px 20px}
+.meta{display:flex;justify-content:space-between;color:var(--soft);font-size:14px;margin-bottom:6px}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:22px}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.dirlabel{color:var(--soft);font-size:14px;margin:0 0 4px}
+.prompt{font:700 clamp(30px,9vw,44px)/1.1 "Bricolage Grotesque",sans-serif;margin:0 0 6px;word-break:break-word}
+.prompt span{background:linear-gradient(transparent 62%,var(--mark) 62%);padding:0 2px}
+.note{color:var(--soft);font-size:15px;margin:0 0 16px;min-height:1px}
+input[type=text],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:12px 14px}
+input.answer{font-size:20px}
+input.answer.ok{border-color:var(--ok);background:var(--okbg)}
+input.answer.bad{border-color:var(--bad);background:var(--badbg)}
+.row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.btn{border:0;border-radius:12px;padding:12px 18px;font:700 16px "Atkinson Hyperlegible",sans-serif;cursor:pointer;background:var(--btn);color:var(--btnink);flex:1}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);flex:0 0 auto}
+.btn.small{padding:7px 12px;font-size:14px;flex:0 0 auto}
+.btn:disabled{opacity:.45;cursor:default}
+.feedback{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:16px}
+.feedback.ok{background:var(--okbg);color:var(--ok)}
+.feedback.bad{background:var(--badbg);color:var(--bad)}
+.feedback strong{color:var(--ink);font-size:19px}
+.say{border:0;background:none;cursor:pointer;font-size:18px;padding:0 4px;vertical-align:middle}
+.empty{text-align:center;padding:28px 10px}
+.empty h2{font:700 24px "Bricolage Grotesque",sans-serif;margin:0 0 8px}
+.empty p{color:var(--soft);margin:0 0 16px}
+label{display:block;font-weight:700;font-size:15px;margin:12px 0 5px}
+.hint{color:var(--soft);font-size:14px;margin:4px 0 0}
+h2.sec{font:700 20px "Bricolage Grotesque",sans-serif;margin:26px 0 10px}
+.search{margin-bottom:10px}
+ul.words{list-style:none;padding:0;margin:0;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+ul.words li{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--line)}
+ul.words li:first-child{border-top:0}
+.w{flex:1;min-width:0}
+.w b{display:block;word-break:break-word}
+.w small{color:var(--soft);word-break:break-word}
+.lvl{display:flex;gap:2px}
+.lvl i{width:6px;height:14px;border-radius:2px;background:var(--line)}
+.lvl i.on{background:var(--ok)}
+.iconbtn{border:0;background:none;color:var(--soft);cursor:pointer;font-size:14px;padding:6px;text-decoration:underline}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px}
+.stat b{display:block;font:800 30px "Bricolage Grotesque",sans-serif}
+.stat span{color:var(--soft);font-size:14px}
+.boxes{display:flex;align-items:flex-end;gap:6px;height:110px;margin-top:8px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px}
+.boxes div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:12px;color:var(--soft)}
+.boxes div i{display:block;width:100%;background:var(--ink);border-radius:4px 4px 0 0;min-height:2px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--btn);color:var(--btnink);padding:10px 16px;border-radius:10px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+.sugg{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:0}
+.sugg:empty{display:none}
+.sugg .lab{color:var(--soft);font-size:14px;margin-right:2px}
+.chip{border:2px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:5px 12px;font:700 15px "Atkinson Hyperlegible",sans-serif;cursor:pointer}
+.chip:hover{border-color:var(--ink)}
+.chip.ex{font-weight:400;font-style:italic;border-style:dashed;text-align:left;border-radius:12px}
+.sugg .wait{color:var(--soft);font-size:14px}
+.sync{font-size:13px;color:var(--soft);margin-top:18px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Słówka</h1>
+    <div class="streak" id="streak"></div>
+  </header>
+  <nav role="tablist">
+    <button role="tab" data-tab="learn" aria-selected="true">Nauka</button>
+    <button role="tab" data-tab="words" aria-selected="false">Moje słówka</button>
+    <button role="tab" data-tab="stats" aria-selected="false">Postępy</button>
+  </nav>
+
+  <section class="panel" id="learn"></section>
+
+  <section class="panel" id="words" hidden>
+    <div class="card">
+      <form id="addForm" autocomplete="off">
+        <label for="fPl">Po polsku</label>
+        <input type="text" id="fPl" required>
+        <div class="sugg" id="sugPl" aria-live="polite"></div>
+        <label for="fEn">Po angielsku</label>
+        <input type="text" id="fEn" required autocapitalize="off">
+        <div class="sugg" id="sugEn" aria-live="polite"></div>
+        <p class="hint">Kilka poprawnych odpowiedzi oddziel ukośnikiem, np. <i>car / automobile</i></p>
+        <label for="fNote">Przykład lub podpowiedź (opcjonalnie)</label>
+        <input type="text" id="fNote">
+        <div class="row">
+          <button class="btn" type="submit" id="addBtn">Dodaj słówko</button>
+          <button class="btn ghost" type="button" id="cancelEdit" hidden>Anuluj</button>
+        </div>
+      </form>
+    </div>
+
+    <h2 class="sec">Dodaj wiele naraz</h2>
+    <div class="card">
+      <textarea id="bulk" rows="5" placeholder="wrzeciono - spindle&#10;tolerancja - tolerance&#10;frez - end mill / cutter"></textarea>
+      <p class="hint">Jedno słówko w linii: polskie, myślnik, angielskie. Działa też tabulator, średnik lub znak =. Możesz wkleić kolumny z Excela.</p>
+      <div class="row"><button class="btn" id="bulkBtn">Importuj</button></div>
+    </div>
+
+    <h2 class="sec" id="listTitle">Lista</h2>
+    <input type="text" class="search" id="search" placeholder="Szukaj…">
+    <ul class="words" id="list"></ul>
+  </section>
+
+  <section class="panel" id="stats" hidden></section>
+  <p class="sync" id="sync"></p>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+const INTERVALS=[0,1,3,7,14,30,60]; // dni dla poziomów 1..6
+const MAX_BOX=6;
+const LS_KEY='slowka-state-v1';
+const $=s=>document.querySelector(s);
+
+const todayStr=(d=new Date())=>{const z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())};
+const addDays=(s,n)=>{const [y,m,d]=s.split('-').map(Number);const dt=new Date(y,m-1,d+n);return todayStr(dt)};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+let state={words:[],settings:{newPerDay:10,dir:'pl-en'},intro:{date:'',count:0},days:{},updatedAt:0};
+
+function loadLocal(){try{const r=localStorage.getItem(LS_KEY);if(r){state=Object.assign(state,JSON.parse(r))}}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(state))}catch(e){}}
+function save(){state.updatedAt=Date.now();saveLocal()}
+function setSync(t){$('#sync').textContent=t}
+
+// ---------- sprawdzanie odpowiedzi ----------
+const norm=s=>s.toLowerCase().normalize('NFC').replace(/[.,!?;:"„”'’]/g,'').replace(/\s+/g,' ').trim();
+const alts=s=>s.split(/[\/|]/).map(norm).filter(Boolean);
+function lev(a,b){const m=a.length,n=b.length;if(Math.abs(m-n)>1)return 2;const d=Array.from({length:m+1},(_,i)=>[i]);for(let j=1;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
+function check(input,target){
+  const a=norm(input);if(!a)return 'bad';
+  const list=alts(target);
+  if(list.includes(a))return 'ok';
+  if(list.some(t=>t.length>=4&&lev(a,t)===1))return 'typo';
+  return 'bad';
+}
+
+// ---------- sesja ----------
+let session=null;
+function buildSession(){
+  const t=todayStr();
+  if(state.intro.date!==t)state.intro={date:t,count:0};
+  const due=state.words.filter(w=>w.box>0&&w.due<=t);
+  const freeNew=Math.max(0,state.settings.newPerDay-state.intro.count);
+  const fresh=state.words.filter(w=>w.box===0).slice(0,freeNew);
+  const items=shuffle([...due,...fresh]).map(w=>({id:w.id,retry:false,dir:pickDir()}));
+  session={queue:items,total:items.length,done:0,good:0,phase:'ask',cur:null,result:null};
+  next();
+}
+function pickDir(){const d=state.settings.dir;return d==='mix'?(Math.random()<.5?'pl-en':'en-pl'):d}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function next(){
+  session.cur=session.queue.shift()||null;session.phase='ask';session.result=null;renderLearn();
+}
+function answer(given,skip){
+  const it=session.cur;const w=state.words.find(x=>x.id===it.id);if(!w){next();return}
+  const target=it.dir==='pl-en'?w.en:w.pl;
+  const res=skip?'bad':check(given,target);
+  session.result=res;session.phase='feedback';session.given=given;
+  const t=todayStr();
+  if(!it.retry){
+    w.seen=(w.seen||0)+1;
+    if(res!=='bad'){
+      if(w.box===0){state.intro.count++}
+      w.box=Math.min(MAX_BOX,w.box+1);w.due=addDays(t,INTERVALS[w.box]);w.correct=(w.correct||0)+1;session.good++;
+    }else{
+      if(w.box===0){state.intro.count++}
+      w.box=1;w.due=addDays(t,1);w.wrong=(w.wrong||0)+1;
+      session.queue.push({id:w.id,retry:true,dir:it.dir});
+    }
+    session.done++;
+  }else if(res==='bad'){
+    session.queue.push({id:w.id,retry:true,dir:it.dir});
+  }
+  state.days[t]=(state.days[t]||0)+1;
+  save();renderLearn();renderHeader();
+}
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function speak(text){try{const u=new SpeechSynthesisUtterance(text.split('/')[0]);u.lang='en-GB';speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+const canSpeak='speechSynthesis' in window;
+
+function renderLearn(){
+  const el=$('#learn');
+  if(!state.words.length){
+    el.innerHTML=`<div class="card empty"><h2>Zacznij od własnej listy</h2><p>Dodaj słówka, których chcesz się nauczyć. Codziennie dostaniesz krótką sesję z nowymi słowami i powtórkami.</p><button class="btn" id="goAdd">Dodaj pierwsze słówka</button></div>`;
+    $('#goAdd').onclick=()=>switchTab('words');return;
+  }
+  if(!session)buildSession();
+  if(!session.cur){
+    const t=todayStr();
+    const nextDue=state.words.filter(w=>w.box>0).map(w=>w.due).sort()[0];
+    const left=state.words.filter(w=>w.box===0).length;
+    const msg=session.total?`Przerobione: ${session.total}, dobrze za pierwszym razem: ${session.good}.`:'Na dziś nie masz nic do powtórki.';
+    el.innerHTML=`<div class="card empty"><h2>${session.total?'Sesja zakończona':'Wszystko zrobione'}</h2><p>${msg}${nextDue?` Następna powtórka: ${nextDue===addDays(t,1)?'jutro':nextDue}.`:''}${left?` Nowych słówek w kolejce: ${left}.`:''}</p>
+    ${left?`<button class="btn" id="more">Ucz się 5 nowych słówek teraz</button>`:''}</div>
+    ${settingsHtml()}`;
+    if(left)$('#more').onclick=()=>{state.intro.count=Math.max(0,state.settings.newPerDay-5);buildSession()};
+    bindSettings();return;
+  }
+  const it=session.cur;const w=state.words.find(x=>x.id===it.id);
+  const q=it.dir==='pl-en'?w.pl:w.en, a=it.dir==='pl-en'?w.en:w.pl;
+  const pct=session.total?Math.round(session.done/session.total*100):0;
+  const isNew=w.box===0&&!it.retry;
+  const fb=session.phase==='feedback';
+  let fbHtml='';
+  if(fb){
+    const sayBtn=canSpeak?`<button class="say" id="sayA" aria-label="Wymowa">🔊</button>`:'';
+    const enWord=it.dir==='pl-en'?a:q;
+    if(session.result==='ok')fbHtml=`<div class="feedback ok">Dobrze! <strong>${esc(a)}</strong> ${it.dir==='pl-en'?sayBtn:''}</div>`;
+    else if(session.result==='typo')fbHtml=`<div class="feedback ok">Dobrze, ale z literówką. Poprawnie: <strong>${esc(a)}</strong> ${it.dir==='pl-en'?sayBtn:''}</div>`;
+    else fbHtml=`<div class="feedback bad">Poprawna odpowiedź: <strong>${esc(a)}</strong> ${it.dir==='pl-en'?sayBtn:''}<br>To słówko wróci jeszcze w tej sesji.</div>`;
+  }
+  el.innerHTML=`<div class="card">
+    <div class="meta"><span>${session.done} z ${session.total}${session.queue.length&&session.done>=session.total?' · poprawki':''}</span><span>${isNew?'Nowe słówko':it.retry?'Poprawka':'Powtórka'}</span></div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <p class="dirlabel">${it.dir==='pl-en'?'Przetłumacz na angielski':'Przetłumacz na polski'}</p>
+    <p class="prompt"><span>${esc(q)}</span>${it.dir==='en-pl'&&canSpeak?` <button class="say" id="sayQ" aria-label="Wymowa">🔊</button>`:''}</p>
+    <p class="note">${w.note?esc(w.note):''}</p>
+    <input type="text" class="answer ${fb?(session.result==='bad'?'bad':'ok'):''}" id="ans" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Wpisz tłumaczenie" ${fb?'readonly':''} value="${fb?esc(session.given||''):''}">
+    ${fbHtml}
+    <div class="row">
+      ${fb?`<button class="btn" id="nextBtn">Dalej</button>`:`<button class="btn" id="checkBtn">Sprawdź</button><button class="btn ghost" id="skipBtn">Nie wiem</button>`}
+    </div>
+  </div>`;
+  const inp=$('#ans');
+  if(fb){
+    $('#nextBtn').onclick=next;$('#nextBtn').focus();
+    const s=$('#sayA');if(s)s.onclick=()=>speak(w.en);
+    if(it.dir==='pl-en'&&session.result!=='bad'&&canSpeak)speak(w.en);
+  }else{
+    inp.focus();
+    const go=()=>answer(inp.value,false);
+    $('#checkBtn').onclick=go;
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}};
+    $('#skipBtn').onclick=()=>answer('',true);
+    const s=$('#sayQ');if(s)s.onclick=()=>speak(w.en);
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&session&&session.phase==='feedback'&&!$('#learn').hidden&&document.activeElement.id!=='nextBtn'){e.preventDefault();next()}});
+
+function settingsHtml(){
+  const s=state.settings;
+  return `<h2 class="sec">Ustawienia</h2><div class="card">
+  <label for="sNew">Nowych słówek dziennie</label>
+  <select id="sNew">${[5,10,15,20,30].map(n=>`<option ${n===s.newPerDay?'selected':''}>${n}</option>`).join('')}</select>
+  <label for="sDir">Kierunek</label>
+  <select id="sDir"><option value="pl-en" ${s.dir==='pl-en'?'selected':''}>Polski → angielski</option><option value="en-pl" ${s.dir==='en-pl'?'selected':''}>Angielski → polski</option><option value="mix" ${s.dir==='mix'?'selected':''}>Na zmianę</option></select></div>`;
+}
+function bindSettings(){
+  $('#sNew').onchange=e=>{state.settings.newPerDay=+e.target.value;save();toast('Zapisano ustawienia')};
+  $('#sDir').onchange=e=>{state.settings.dir=e.target.value;save();toast('Zapisano ustawienia')};
+}
+
+// ---------- lista słówek ----------
+let editingId=null;
+function renderList(){
+  const q=norm($('#search').value||'');
+  const items=state.words.filter(w=>!q||norm(w.pl).includes(q)||norm(w.en).includes(q)).slice().reverse();
+  $('#listTitle').textContent=`Lista (${state.words.length})`;
+  $('#list').innerHTML=items.length?items.map(w=>`<li><div class="w"><b>${esc(w.pl)}</b><small>${esc(w.en)}${w.note?' · '+esc(w.note):''}</small></div>
+    <div class="lvl" title="Poziom ${w.box} z ${MAX_BOX}">${Array.from({length:MAX_BOX},(_,i)=>`<i class="${i<w.box?'on':''}"></i>`).join('')}</div>
+    <button class="iconbtn" data-edit="${w.id}">Edytuj</button><button class="iconbtn" data-del="${w.id}">Usuń</button></li>`).join('')
+    :`<li><div class="w"><small>${state.words.length?'Nic nie pasuje do wyszukiwania.':'Lista jest pusta. Dodaj słówka powyżej.'}</small></div></li>`;
+}
+$('#list').onclick=e=>{
+  const d=e.target.dataset;
+  if(d.del){const w=state.words.find(x=>x.id===d.del);if(w&&confirm(`Usunąć „${w.pl}”?`)){state.words=state.words.filter(x=>x.id!==d.del);session=null;save();renderList();toast('Usunięto')}}
+  if(d.edit){const w=state.words.find(x=>x.id===d.edit);if(!w)return;editingId=w.id;$('#fPl').value=w.pl;$('#fEn').value=w.en;$('#fNote').value=w.note||'';$('#addBtn').textContent='Zapisz zmiany';$('#cancelEdit').hidden=false;$('#fPl').focus();window.scrollTo({top:0,behavior:'smooth'})}
+};
+function resetForm(){clearSugg();editingId=null;$('#addForm').reset();$('#addBtn').textContent='Dodaj słówko';$('#cancelEdit').hidden=true}
+$('#cancelEdit').onclick=resetForm;
+$('#addForm').onsubmit=e=>{
+  e.preventDefault();
+  const pl=$('#fPl').value.trim(),en=$('#fEn').value.trim(),note=$('#fNote').value.trim();
+  if(!pl||!en)return;
+  if(editingId){const w=state.words.find(x=>x.id===editingId);if(w){w.pl=pl;w.en=en;w.note=note}toast('Zapisano zmiany');resetForm()}
+  else{
+    if(state.words.some(w=>norm(w.pl)===norm(pl)&&norm(w.en)===norm(en))){toast('To słówko już jest na liście');return}
+    state.words.push(newWord(pl,en,note));clearSugg();toast('Dodano: '+pl);$('#addForm').reset();$('#fPl').focus();
+  }
+  session=null;save();renderList();
+};
+function newWord(pl,en,note){return{id:uid(),pl,en,note:note||'',box:0,due:todayStr(),added:Date.now(),seen:0,correct:0,wrong:0}}
+$('#bulkBtn').onclick=()=>{
+  const lines=$('#bulk').value.split('\n');let added=0,skipped=0;
+  for(const line of lines){
+    const l=line.trim();if(!l)continue;
+    const m=l.match(/^(.+?)\s*(?:\t|\s[-–—]\s|;|=)\s*(.+)$/);
+    if(!m){skipped++;continue}
+    const pl=m[1].trim(),en=m[2].trim();
+    if(state.words.some(w=>norm(w.pl)===norm(pl)&&norm(w.en)===norm(en))){skipped++;continue}
+    state.words.push(newWord(pl,en,''));added++;
+  }
+  if(added){$('#bulk').value='';session=null;save();renderList()}
+  toast(`Dodano: ${added}`+(skipped?`, pominięto: ${skipped}`:''));
+};
+$('#search').oninput=renderList;
+
+
+// ---------- podpowiedzi tłumaczeń (MyMemory, wymaga internetu) ----------
+let sugCtl=null, sugTimer=null, sugSeq=0;
+const sugCache={};
+function clearSugg(){$('#sugPl').innerHTML='';$('#sugEn').innerHTML=''}
+async function fetchTr(word,from){
+  const key=from+':'+word.toLowerCase();if(sugCache[key])return sugCache[key];
+  const pair=from==='pl'?'pl|en':'en|pl';
+  const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(word)+'&langpair='+pair,{signal:sugCtl.signal});
+  if(!r.ok)throw new Error('http');
+  const j=await r.json();
+  const out=[],seen=new Set();
+  const add=t=>{if(typeof t!=='string')return;t=t.trim().replace(/[.!?]+$/,'');if(!t||t.length>40)return;
+    if(!/[A-Z]{2}/.test(t.slice(1)))t=t.charAt(0).toLowerCase()+t.slice(1);
+    const k=norm(t);if(!k||k===norm(word)||seen.has(k))return;seen.add(k);out.push(t)};
+  add(j.responseData&&j.responseData.translatedText);
+  (j.matches||[]).filter(m=>m&&norm(m.segment||'')===norm(word)).sort((a,b)=>(+b.match||0)-(+a.match||0)).forEach(m=>add(m.translation));
+  return sugCache[key]=out.slice(0,4);
+}
+async function suggest(from){
+  const src=from==='pl'?$('#fPl'):$('#fEn'), dst=from==='pl'?$('#fEn'):$('#fPl');
+  const box=from==='pl'?$('#sugPl'):$('#sugEn'), other=from==='pl'?$('#sugEn'):$('#sugPl');
+  const word=src.value.trim();other.innerHTML='';
+  if(editingId||word.length<2||dst.value.trim()){box.innerHTML='';return}
+  if(!navigator.onLine){box.innerHTML='<span class="wait">Podpowiedzi działają tylko z internetem</span>';return}
+  if(sugCtl)sugCtl.abort();sugCtl=new AbortController();const seq=++sugSeq;
+  box.innerHTML='<span class="wait">Szukam tłumaczeń…</span>';
+  try{
+    const tr=await fetchTr(word,from);
+    if(seq!==sugSeq||src.value.trim()!==word||dst.value.trim())return;
+    if(!tr.length){box.innerHTML='<span class="wait">Brak podpowiedzi</span>';return}
+    box.innerHTML=`<span class="lab">${from==='pl'?'Po angielsku:':'Po polsku:'}</span>`+
+      tr.map(t=>`<button type="button" class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')+
+      (tr.length>1?`<button type="button" class="chip" data-t="${esc(tr.join(' / '))}">wszystkie</button>`:'');
+    box.onclick=e=>{const b=e.target.closest('button');if(!b)return;dst.value=b.dataset.t;box.innerHTML='';$('#fNote').focus()};
+  }catch(e){if(seq!==sugSeq||(e&&e.name==='AbortError'))return;box.innerHTML='<span class="wait">Nie udało się pobrać podpowiedzi</span>'}
+}
+function schedule(from){clearTimeout(sugTimer);sugTimer=setTimeout(()=>suggest(from),650)}
+$('#fPl').addEventListener('input',()=>schedule('pl'));
+$('#fEn').addEventListener('input',()=>schedule('en'));
+
+// ---------- statystyki ----------
+function streak(){let n=0,d=todayStr();if(!state.days[d])d=addDays(d,-1);while(state.days[d]){n++;d=addDays(d,-1)}return n}
+function renderHeader(){const s=streak();$('#streak').innerHTML=s?`Seria: <b>${s}</b> ${s===1?'dzień':'dni'}`:''}
+function renderStats(){
+  const t=todayStr(),W=state.words;
+  const learned=W.filter(w=>w.box>=4).length, due=W.filter(w=>w.box>0&&w.due<=t).length, fresh=W.filter(w=>w.box===0).length;
+  const tot=W.reduce((a,w)=>a+(w.correct||0)+(w.wrong||0),0), cor=W.reduce((a,w)=>a+(w.correct||0),0);
+  const counts=Array.from({length:MAX_BOX+1},(_,i)=>W.filter(w=>w.box===i).length);const max=Math.max(1,...counts);
+  const hard=W.filter(w=>(w.wrong||0)>0).sort((a,b)=>(b.wrong||0)-(a.wrong||0)).slice(0,5);
+  $('#stats').innerHTML=`<div class="stats">
+    <div class="stat"><b>${W.length}</b><span>słówek na liście</span></div>
+    <div class="stat"><b>${learned}</b><span>dobrze opanowanych</span></div>
+    <div class="stat"><b>${due}</b><span>do powtórki dziś</span></div>
+    <div class="stat"><b>${tot?Math.round(cor/tot*100)+'%':'–'}</b><span>trafnych odpowiedzi</span></div>
+  </div>
+  <h2 class="sec">Słówka według poziomu</h2>
+  <div class="boxes">${counts.map((c,i)=>`<div><span>${c}</span><i style="height:${Math.round(c/max*70)}%"></i><span>${i===0?'nowe':i}</span></div>`).join('')}</div>
+  <p class="hint">Każda dobra odpowiedź przesuwa słówko poziom wyżej i wydłuża przerwę do następnej powtórki (1, 3, 7, 14, 30, 60 dni). Błąd cofa je na poziom 1. Nowych czeka: ${fresh}.</p>
+  <h2 class="sec">Kopia zapasowa</h2>
+  <div class="card"><p class="hint" style="margin:0 0 10px">Zapisz plik z postępami, np. na Dysku Google. Przyda się przy zmianie telefonu albo po wyczyszczeniu danych przeglądarki.</p>
+  <div class="row"><button class="btn" id="expBtn">Zapisz kopię</button><button class="btn ghost" id="impBtn">Wczytaj kopię</button></div>
+  <input type="file" id="impFile" accept=".json,application/json" hidden></div>
+  ${hard.length?`<h2 class="sec">Najtrudniejsze</h2><ul class="words">${hard.map(w=>`<li><div class="w"><b>${esc(w.pl)}</b><small>${esc(w.en)}</small></div><small style="color:var(--bad)">błędy: ${w.wrong}</small></li>`).join('')}</ul>`:''}`;
+  bindBackup();
+}
+
+function bindBackup(){
+  $('#expBtn').onclick=()=>{const b=new Blob([JSON.stringify(state)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='slowka-kopia-'+todayStr()+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)};
+  $('#impBtn').onclick=()=>$('#impFile').click();
+  $('#impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.words))throw 0;
+    if(!confirm(`Wczytać kopię z ${d.words.length} słówkami? Obecna lista zostanie zastąpiona.`))return;
+    state=Object.assign({words:[],settings:{newPerDay:10,dir:'pl-en'},intro:{date:'',count:0},days:{}},d);session=null;save();renderHeader();renderStats();toast('Wczytano kopię')}
+    catch(err){toast('To nie jest plik kopii ze Słówek')}e.target.value=''};
+}
+// ---------- nawigacja ----------
+function switchTab(name){
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.hidden=p.id!==name);
+  if(name==='learn'){renderLearn()}if(name==='words')renderList();if(name==='stats')renderStats();
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1800)}
+
+// ---------- start ----------
+loadLocal();renderHeader();renderLearn();
+(async()=>{
+  try{
+    if(navigator.storage&&navigator.storage.persist){const ok=await navigator.storage.persist();setSync(ok?'Słówka są zapisane na stałe na tym telefonie':'Słówka są zapisane na tym telefonie. Rób czasem kopię zapasową.')}
+    else setSync('Słówka są zapisane na tym telefonie');
+  }catch(e){}
+  if('serviceWorker' in navigator){try{await navigator.serviceWorker.register('sw.js')}catch(e){}}
+})();
+})();
+</script>
+</body>
+</html>
